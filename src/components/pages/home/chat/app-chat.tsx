@@ -8,6 +8,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import AppChatSidebar from './app-chat-sidebar';
+import AppMessageContainer from './app-message-container';
 
 interface IProps {
   defaultLayout: number[] | undefined;
@@ -60,7 +61,7 @@ export default function AppChat({ defaultLayout = [320, 480] }: IProps) {
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={defaultLayout[1]} minSize={30}>
-        <div className='flex h-full w-full items-center justify-center px-10'>
+        {/* <div className='flex h-full w-full items-center justify-center px-10'>
           <div className='flex flex-col items-center justify-center gap-4'>
             <img
               src='/logo.png'
@@ -71,7 +72,8 @@ export default function AppChat({ defaultLayout = [320, 480] }: IProps) {
               Click on a chat to view the messages
             </p>
           </div>
-        </div>
+        </div> */}
+        <AppMessageContainer />
       </ResizablePanel>
     </ResizablePanelGroup>
   );
