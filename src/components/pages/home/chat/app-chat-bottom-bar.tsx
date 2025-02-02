@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { usePreferences } from '@/store/use-preferences';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Image as ImageIcon,
@@ -8,12 +9,26 @@ import {
   ThumbsUp,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import useSound from 'use-sound';
 import AppEmojiPicker from './app-emoji-picker';
 
 export default function AppChatBottomBar() {
   const [message, setMessage] = useState<string>('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const isPending = false;
+
+  const { soundEnabled } = usePreferences();
+  const [playSound1] = useSound('/sounds/keystroke1.mp3');
+  const [playSound2] = useSound('/sounds/keystroke2.mp3');
+  const [playSound3] = useSound('/sounds/keystroke3.mp3');
+  const [playSound4] = useSound('/sounds/keystroke4.mp3');
+
+  const playSoundFunction = [playSound1, playSound2, playSound3, playSound4];
+
+  const playRandomKeyStrokeSound = () => {
+    const randomIndex = Math.floor(Math.random() * playSoundFunction.length);
+    soundEnabled && playSoundFunction[randomIndex]();
+  };
 
   return (
     <div className='flex w-full items-center justify-between gap-2 p-2'>
@@ -102,7 +117,7 @@ export default function AppChatBottomBar() {
             // onKeyDown={handleKeyDown}
             onChange={(e) => {
               setMessage(e.target.value);
-              // playRandomKeyStrokeSound();
+              playRandomKeyStrokeSound();
             }}
             ref={textAreaRef}
           />

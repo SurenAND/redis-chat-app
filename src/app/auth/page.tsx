@@ -38,7 +38,7 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className='relative hidden flex-1 items-center justify-center overflow-hidden md:flex'>
+      <div className='bg-noise relative hidden flex-1 items-center justify-center overflow-hidden md:flex'>
         <Image
           src='/hero-right.png'
           alt='Hero Image'
