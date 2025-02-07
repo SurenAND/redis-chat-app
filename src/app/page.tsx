@@ -1,8 +1,38 @@
 import AppPreferencesTab from '@/components/common/app-preferences-tab';
 import AppChat from '@/components/pages/home/chat/app-chat';
+import { User } from '@/db/dummy';
+import { redis } from '@/lib/db';
 import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+
+async function getUsers(): Promise<User[]> {
+  const userKeys: string[] = [];
+  let cursor = '0';
+
+  do {
+    const [nextCursor, keys] = await redis.scan(cursor, {
+      match: 'user:*',
+      type: 'hash',
+      count: 100,
+    });
+    cursor = nextCursor;
+    userKeys.push(...keys);
+  } while (cursor !== '0');
+
+  // get current user
+  const { getUser } = getKindeServerSession();
+  const currentUser = await getUser();
+
+  // get all users
+  const pipeline = redis.pipeline();
+  userKeys.forEach((key) => pipeline.hgetall(key));
+  const results = (await pipeline.exec()) as User[];
+
+  const users: User[] = results.filter((user) => user.id !== currentUser?.id);
+
+  return users;
+}
 
 export default async function Home() {
   const layout = (await cookies()).get('react-resizable-panels:layout');
@@ -11,6 +41,8 @@ export default async function Home() {
   const { isAuthenticated } = getKindeServerSession();
 
   if (!(await isAuthenticated())) redirect('/auth');
+
+  const users = await getUsers();
 
   return (
     <main className='flex h-screen flex-col items-center justify-center gap-4 p-4 py-32 md:px-24'>
@@ -24,7 +56,7 @@ export default async function Home() {
       />
 
       <div className='z-10 min-h-[85vh] w-full max-w-5xl rounded-lg border text-sm '>
-        <AppChat defaultLayout={defaultLayout} />
+        <AppChat defaultLayout={defaultLayout} users={users} />
       </div>
     </main>
   );

@@ -7,22 +7,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { USERS } from '@/db/dummy';
+import { User } from '@/db/dummy';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/store/use-preferences';
+import { useSelectedUser } from '@/store/use-selected-user';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
 import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
-
 import { LogOut } from 'lucide-react';
 import useSound from 'use-sound';
 
 interface IProps {
   isCollapsed: boolean;
+  users: User[];
 }
 
-export default function AppChatSidebar({ isCollapsed }: IProps) {
-  const selectedUser = USERS[0];
+export default function AppChatSidebar({ isCollapsed, users }: IProps) {
   const [playClickSound] = useSound('/sounds/mouse-click.mp3');
   const { soundEnabled } = usePreferences();
+  const { selectedUser, setSelectedUser } = useSelectedUser();
+
+  const { user } = useKindeBrowserClient();
 
   return (
     <div className='relative flex h-full max-h-full flex-col gap-4 overflow-auto bg-background p-2 data-[collapsed=true]:p-2'>
@@ -31,14 +35,14 @@ export default function AppChatSidebar({ isCollapsed }: IProps) {
           <div className='flex items-center gap-2 text-2xl'>
             <p className='font-medium'>
               Chats{' '}
-              <span className='text-muted-foreground'>({USERS.length})</span>
+              <span className='text-muted-foreground'>({users.length})</span>
             </p>
           </div>
         </div>
       )}
 
       <ScrollArea className='gap-2 px-2 group-[[data-collapsed=true]]:justify-center group-[[data-collapsed=true]]:px-2'>
-        {USERS.map((user, idx) =>
+        {users.map((user, idx) =>
           isCollapsed ? (
             <TooltipProvider key={idx}>
               <Tooltip delayDuration={0}>
@@ -46,6 +50,7 @@ export default function AppChatSidebar({ isCollapsed }: IProps) {
                   <div
                     onClick={() => {
                       soundEnabled && playClickSound();
+                      setSelectedUser(user);
                     }}
                   >
                     <Avatar className='my-1 flex items-center justify-center'>
@@ -74,11 +79,12 @@ export default function AppChatSidebar({ isCollapsed }: IProps) {
               size='xl'
               className={cn(
                 'my-1 w-full justify-start gap-4',
-                selectedUser.email === user.email &&
+                selectedUser?.email === user.email &&
                   'shrink dark:bg-muted dark:text-white dark:hover:bg-muted dark:hover:text-white',
               )}
               onClick={() => {
                 soundEnabled && playClickSound();
+                setSelectedUser(user);
               }}
             >
               <Avatar className='flex items-center justify-center'>
@@ -104,16 +110,14 @@ export default function AppChatSidebar({ isCollapsed }: IProps) {
             <div className='hidden items-center gap-2 md:flex '>
               <Avatar className='flex items-center justify-center'>
                 <AvatarImage
-                  // src={user?.picture || '/user-placeholder.png'}
-                  src={'/user-placeholder.png'}
+                  src={user?.picture || '/user-placeholder.png'}
                   alt='avatar'
                   referrerPolicy='no-referrer'
                   className='h-8 w-8 rounded-full border-2 border-white'
                 />
               </Avatar>
               <p className='font-bold'>
-                {/* {user?.given_name} {user?.family_name} */}
-                John Doe
+                {user?.given_name} {user?.family_name}
               </p>
             </div>
           )}

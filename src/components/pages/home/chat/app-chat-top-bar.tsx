@@ -1,9 +1,9 @@
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
-import { USERS } from '@/db/dummy';
+import { useSelectedUser } from '@/store/use-selected-user';
 import { Info, X } from 'lucide-react';
 
 export default function AppChatTopBar() {
-  const selectedUser = USERS[0];
+  const { selectedUser, setSelectedUser } = useSelectedUser();
   return (
     <div className='flex h-20 w-full items-center justify-between border-b p-4'>
       <div className='flex items-center gap-2'>
@@ -21,7 +21,7 @@ export default function AppChatTopBar() {
         <Info className='cursor-pointer text-muted-foreground hover:text-primary' />
         <X
           className='cursor-pointer text-muted-foreground hover:text-primary'
-          onClick={() => {}}
+          onClick={() => setSelectedUser(null)}
         />
       </div>
     </div>
