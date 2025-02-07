@@ -10,6 +10,8 @@ import {
 import { USERS } from '@/db/dummy';
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/store/use-preferences';
+import { LogoutLink } from '@kinde-oss/kinde-auth-nextjs/components';
+
 import { LogOut } from 'lucide-react';
 import useSound from 'use-sound';
 
@@ -116,9 +118,9 @@ export default function AppChatSidebar({ isCollapsed }: IProps) {
             </div>
           )}
           <div className='flex'>
-            {/* <LogoutLink> */}
-            <LogOut size={22} cursor={'pointer'} />
-            {/* </LogoutLink> */}
+            <LogoutLink>
+              <LogOut size={22} cursor={'pointer'} />
+            </LogoutLink>
           </div>
         </div>
       </div>

@@ -1,10 +1,16 @@
 import AppPreferencesTab from '@/components/common/app-preferences-tab';
 import AppChat from '@/components/pages/home/chat/app-chat';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 export default async function Home() {
   const layout = (await cookies()).get('react-resizable-panels:layout');
   const defaultLayout = layout ? JSON.parse(layout.value) : undefined;
+
+  const { isAuthenticated } = getKindeServerSession();
+
+  if (!(await isAuthenticated())) redirect('/auth');
 
   return (
     <main className='flex h-screen flex-col items-center justify-center gap-4 p-4 py-32 md:px-24'>

@@ -1,7 +1,13 @@
 import AppAuthButtons from '@/components/pages/auth/app-auth-buttons';
+import { getKindeServerSession } from '@kinde-oss/kinde-auth-nextjs/server';
 import Image from 'next/image';
+import { redirect } from 'next/navigation';
 
-export default function AuthPage() {
+export default async function AuthPage() {
+  const { isAuthenticated } = getKindeServerSession();
+
+  if (await isAuthenticated()) redirect('/');
+
   return (
     <div className='flex h-screen w-full'>
       <div className='relative flex flex-1 items-center justify-center overflow-hidden bg-[#651c2b] dark:bg-[#651c2b55]'>
