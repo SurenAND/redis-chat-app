@@ -1,6 +1,9 @@
+import { sendMessageAction } from '@/actions/message.actions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { usePreferences } from '@/store/use-preferences';
+import { useSelectedUser } from '@/store/use-selected-user';
+import { useMutation } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Image as ImageIcon,
@@ -15,8 +18,7 @@ import AppEmojiPicker from './app-emoji-picker';
 export default function AppChatBottomBar() {
   const [message, setMessage] = useState<string>('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const isPending = false;
-
+  const { selectedUser } = useSelectedUser();
   const { soundEnabled } = usePreferences();
   const [playSound1] = useSound('/sounds/keystroke1.mp3');
   const [playSound2] = useSound('/sounds/keystroke2.mp3');
@@ -28,6 +30,35 @@ export default function AppChatBottomBar() {
   const playRandomKeyStrokeSound = () => {
     const randomIndex = Math.floor(Math.random() * playSoundFunction.length);
     soundEnabled && playSoundFunction[randomIndex]();
+  };
+  const { mutate: sendMessage, isPending } = useMutation({
+    mutationFn: sendMessageAction,
+  });
+
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
+
+    sendMessage({
+      content: message,
+      messageType: 'text',
+      receiverId: selectedUser?.id!,
+    });
+
+    setMessage('');
+
+    textAreaRef.current?.focus();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+
+    if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      setMessage(message + '\n');
+    }
   };
 
   return (
@@ -114,7 +145,7 @@ export default function AppChatBottomBar() {
             className='flex h-9 min-h-0 w-full resize-none items-center overflow-hidden rounded-full
 						border bg-background'
             value={message}
-            // onKeyDown={handleKeyDown}
+            onKeyDown={handleKeyDown}
             onChange={(e) => {
               setMessage(e.target.value);
               playRandomKeyStrokeSound();
@@ -138,7 +169,7 @@ export default function AppChatBottomBar() {
             className='h-9 w-9 shrink-0 dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white'
             variant={'ghost'}
             size={'icon'}
-            // onClick={handleSendMessage}
+            onClick={handleSendMessage}
           >
             <SendHorizontal size={20} className='text-muted-foreground' />
           </Button>
@@ -152,13 +183,13 @@ export default function AppChatBottomBar() {
               <ThumbsUp
                 size={20}
                 className='text-muted-foreground'
-                // onClick={() => {
-                //   sendMessage({
-                //     content: '👍',
-                //     messageType: 'text',
-                //     receiverId: selectedUser?.id!,
-                //   });
-                // }}
+                onClick={() => {
+                  sendMessage({
+                    content: '👍',
+                    messageType: 'text',
+                    receiverId: selectedUser?.id!,
+                  });
+                }}
               />
             )}
             {isPending && <Loader size={20} className='animate-spin' />}
