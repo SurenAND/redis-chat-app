@@ -1,9 +1,19 @@
 import { sendMessageAction } from '@/actions/message.actions';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Message } from '@/db/dummy';
+import { pusherClient } from '@/lib/pusher';
 import { usePreferences } from '@/store/use-preferences';
 import { useSelectedUser } from '@/store/use-selected-user';
-import { useMutation } from '@tanstack/react-query';
+import { useKindeBrowserClient } from '@kinde-oss/kinde-auth-nextjs';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Image as ImageIcon,
@@ -11,12 +21,19 @@ import {
   SendHorizontal,
   ThumbsUp,
 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { CldUploadWidget, CloudinaryUploadWidgetInfo } from 'next-cloudinary';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import useSound from 'use-sound';
 import AppEmojiPicker from './app-emoji-picker';
 
 export default function AppChatBottomBar() {
   const [message, setMessage] = useState<string>('');
+  const [imgUrl, setImgUrl] = useState<string>('');
+
+  const { user: currentUser } = useKindeBrowserClient();
+  const queryClient = useQueryClient();
+
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const { selectedUser } = useSelectedUser();
   const { soundEnabled } = usePreferences();
@@ -24,6 +41,8 @@ export default function AppChatBottomBar() {
   const [playSound2] = useSound('/sounds/keystroke2.mp3');
   const [playSound3] = useSound('/sounds/keystroke3.mp3');
   const [playSound4] = useSound('/sounds/keystroke4.mp3');
+
+  const [playNotificationSound] = useSound('/sounds/notification.mp3');
 
   const playSoundFunction = [playSound1, playSound2, playSound3, playSound4];
 
@@ -61,9 +80,44 @@ export default function AppChatBottomBar() {
     }
   };
 
+  useEffect(() => {
+    const channelName = `${currentUser?.id}__${selectedUser?.id}`
+      .split('__')
+      .sort()
+      .join('__');
+    const channel = pusherClient?.subscribe(channelName);
+
+    const handleNewMessage = (data: { message: Message }) => {
+      queryClient.setQueryData(
+        ['messages', selectedUser?.id],
+        (oldMessages: Message[]) => {
+          return [...oldMessages, data.message];
+        },
+      );
+
+      if (soundEnabled && data.message.senderId !== currentUser?.id) {
+        playNotificationSound();
+      }
+    };
+
+    channel.bind('newMessage', handleNewMessage);
+
+    // ! Absolutely important, otherwise the event listener will be added multiple times which means you'll see the incoming new message multiple times
+    return () => {
+      channel.unbind('newMessage', handleNewMessage);
+      pusherClient.unsubscribe(channelName);
+    };
+  }, [
+    currentUser?.id,
+    selectedUser?.id,
+    queryClient,
+    playNotificationSound,
+    soundEnabled,
+  ]);
+
   return (
     <div className='flex w-full items-center justify-between gap-2 p-2'>
-      {/* {!message.trim() && (
+      {!message.trim() && (
         <CldUploadWidget
           signatureEndpoint={'/api/sign-cloudinary-params'}
           onSuccess={(result, { widget }) => {
@@ -81,47 +135,39 @@ export default function AppChatBottomBar() {
             );
           }}
         </CldUploadWidget>
-      )} */}
-
-      {!message.trim() && (
-        <ImageIcon
-          size={20}
-          onClick={() => open()}
-          className='cursor-pointer text-muted-foreground'
-        />
       )}
 
-      {/* <Dialog open={!!imgUrl}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Image Preview</DialogTitle>
-            </DialogHeader>
-            <div className='relative mx-auto flex h-96 w-full items-center justify-center'>
-              <Image
-                src={imgUrl}
-                alt='Image Preview'
-                fill
-                className='object-contain'
-              />
-            </div>
+      <Dialog open={!!imgUrl}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Image Preview</DialogTitle>
+          </DialogHeader>
+          <div className='relative mx-auto flex h-96 w-full items-center justify-center'>
+            <Image
+              src={imgUrl}
+              alt='Image Preview'
+              fill
+              className='object-contain'
+            />
+          </div>
 
-            <DialogFooter>
-              <Button
-                type='submit'
-                onClick={() => {
-                  sendMessage({
-                    content: imgUrl,
-                    messageType: 'image',
-                    receiverId: selectedUser?.id!,
-                  });
-                  setImgUrl('');
-                }}
-              >
-                Send
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog> */}
+          <DialogFooter>
+            <Button
+              type='submit'
+              onClick={() => {
+                sendMessage({
+                  content: imgUrl,
+                  messageType: 'image',
+                  receiverId: selectedUser?.id!,
+                });
+                setImgUrl('');
+              }}
+            >
+              Send
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AnimatePresence>
         <motion.div
@@ -178,21 +224,21 @@ export default function AppChatBottomBar() {
             className='h-9 w-9 shrink-0 dark:bg-muted dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white'
             variant={'ghost'}
             size={'icon'}
+            onClick={() => {
+              if (!isPending) {
+                sendMessage({
+                  content: '👍',
+                  messageType: 'text',
+                  receiverId: selectedUser?.id!,
+                });
+              }
+            }}
           >
-            {!isPending && (
-              <ThumbsUp
-                size={20}
-                className='text-muted-foreground'
-                onClick={() => {
-                  sendMessage({
-                    content: '👍',
-                    messageType: 'text',
-                    receiverId: selectedUser?.id!,
-                  });
-                }}
-              />
+            {!isPending ? (
+              <ThumbsUp size={20} className='text-muted-foreground' />
+            ) : (
+              <Loader size={20} className='animate-spin' />
             )}
-            {isPending && <Loader size={20} className='animate-spin' />}
           </Button>
         )}
       </AnimatePresence>
